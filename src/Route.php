@@ -64,6 +64,9 @@ REGEX;
     /** @var string|null 所属路由组名称 */
     private ?string $groupName = null;
 
+    /** @var list<string> 别名（指向本路由的其他名称，用于 URL 生成与命名解析） */
+    private array $aliases = [];
+
     /**
      * @param array<int, string> $methods HTTP 方法列表
      * @param string $path 路由路径
@@ -138,6 +141,41 @@ REGEX;
     {
         $this->name = $name;
         return $this;
+    }
+
+    /**
+     * 为路由追加别名
+     *
+     * 别名是"指向本路由的另一个名字"。通过别名可以生成与原名相同的 URL，
+     * 也支持通过别名做命名解析。常用于兼容旧链接、语义化多入口等场景：
+     *
+     * ```php
+     * $router->get('/users/{id}', $h)->name('user.show')->alias('profile', 'user.detail');
+     * $router->url('profile', ['id' => 1]); // => /users/1
+     * ```
+     *
+     * @param string ...$names 一个或多个别名
+     * @return self 当前实例，支持链式调用
+     */
+    public function alias(string ...$names): self
+    {
+        foreach ($names as $name) {
+            if ($name !== '' && !in_array($name, $this->aliases, true)) {
+                $this->aliases[] = $name;
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * 获取路由别名列表
+     *
+     * @return list<string> 别名列表
+     */
+    public function getAliases(): array
+    {
+        return $this->aliases;
     }
 
     /**
@@ -449,6 +487,7 @@ REGEX;
             'wheres' => $this->wheres,
             'defaults' => $this->defaults,
             'group' => $this->groupName,
+            'aliases' => $this->aliases,
         ];
     }
 }

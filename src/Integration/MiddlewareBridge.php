@@ -22,6 +22,14 @@ use Kode\Router\MatchResult;
  * 只有真正调用转换方法才会抛异常。因此 composer 里 kode/middleware
  * 只出现在 suggest 中，不构成硬依赖，也不会造成两个包互相依赖。
  *
+ * 结合方式有两层：
+ * 1. 匹配层（本类）：{@see self::matcher()} 把 Dispatcher 包成一个匹配器，
+ *    直接挂进 kode/middleware 的 `Pipe::router()`，路由匹配交由 kode/router。
+ * 2. 执行层（管道）：路由上声明的中间件已经通过 {@see self::toRouteResult()}
+ *    随 RouteResult 传给 kode/middleware，由其管道原生执行；若希望走本包的
+ *    管道，可用 {@see self::controller()} 拿到的闭包作为 Pipe 的终端处理器，
+ *    内部会调用 {@see Dispatcher::run()} 跑完路由中间件 + 处理器。
+ *
  * @package Kode\Router
  * @author  Kode Team <382601296@qq.com>
  * @license MIT
@@ -135,5 +143,30 @@ final class MiddlewareBridge
                 '桥接 kode/middleware 需要先安装该包：composer require kode/middleware'
             );
         }
+    }
+
+    /**
+     * 生成可直接作为 kode/middleware `Pipe` 终端处理器的闭包
+     *
+     * 闭包签名 `fn(ServerRequestInterface $request): mixed`，内部调用
+     * {@see Dispatcher::run()}：先按 kode/router 的契约跑完路由中间件管道，
+     * 再执行处理器。把它挂到 Pipe 末尾即可让 kode/middleware 完整接管
+     * "匹配 → 中间件 → 处理器" 三段式流程，同时复用本包对多进程 / 多线程 /
+     * 协程友好的无状态管道。
+     *
+     * 本方法不依赖 kode/middleware 本身，仅依赖 PSR-7 请求对象（require-dev）。
+     *
+     * @param Dispatcher $dispatcher 分发器（只读，可跨协程共享）
+     * @return \Closure 终端处理器闭包
+     */
+    public static function controller(Dispatcher $dispatcher): \Closure
+    {
+        return static function (object $request) use ($dispatcher): mixed {
+            /** @var \Psr\Http\Message\ServerRequestInterface $request */
+            $method = $request->getMethod();
+            $path = $request->getUri()->getPath();
+
+            return $dispatcher->run($method, $path);
+        };
     }
 }

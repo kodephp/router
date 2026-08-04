@@ -20,22 +20,22 @@ final class Request
     private string $path;
 
     /**
-     * @var array 请求参数（GET/POST）
+     * @var array<string, mixed> 请求参数（GET/POST）
      */
     private array $params = [];
 
     /**
-     * @var array HTTP 请求头
+     * @var array<string, mixed> HTTP 请求头
      */
     private array $headers = [];
 
     /**
      * 构造函数
      *
-     * @param string $method HTTP 方法
-     * @param string $path   请求路径
-     * @param array  $params 请求参数
-     * @param array  $headers 请求头
+     * @param string              $method  HTTP 方法
+     * @param string              $path    请求路径
+     * @param array<string, mixed> $params 请求参数
+     * @param array<string, mixed> $headers 请求头
      */
     public function __construct(
         string $method,

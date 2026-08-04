@@ -71,7 +71,7 @@ final class CompiledRoutes
         return new self(
             $collector->getData(),
             $routes,
-            $collection->names(),
+            $collection->namesWithAliases(),
             $collection->fingerprint(),
             time()
         );

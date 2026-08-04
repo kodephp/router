@@ -18,6 +18,7 @@
 - [分布式 `Distributed\`](#分布式-distributed)
 - [集成 `Integration\`](#集成-integration)
 - [HTTP 对象](#http-对象)
+- [中间件管道 `Middleware\`](#中间件管道-middleware)
 - [异常 `Exception\`](#异常-exception)
 
 ---
@@ -139,15 +140,18 @@ $router->group('api', function ($group, Router $r) {
 
 | 方法 | 返回 | 说明 |
 |------|------|------|
-| `add(Route $route)` | `Route` | 添加路由，重名抛 `InvalidRouteException` |
+| `add(Route $route)` | `Route` | 添加路由，重名抛 `InvalidRouteException`（名称可在 add 之后经 `->name()` 设置，解析时惰性去重） |
 | `addRoute(array $methods, string $path, mixed $handler, ?string $name = null)` | `Route` | 便捷添加 |
 | `all()` | `array<int, Route>` | 全部路由 |
 | `get(int $id)` | `?Route` | 按编译期 ID 取 |
-| `getByName(string $name)` | `?Route` | 按名称取 |
+| `getByName(string $name)` | `?Route` | 按名称或别名取 |
 | `hasName(string $name)` | `bool` | 名称是否存在 |
-| `names()` | `array<string, int>` | 名称 → ID 映射 |
+| `names()` | `array<string, int>` | 名称 → ID 映射（惰性从当前路由推导） |
+| `addAlias(string $alias, string $targetName)` | `void` | 注册别名，目标不存在 / 别名冲突抛 `InvalidRouteException` |
+| `getAliases()` | `array<string, string>` | 别名 → 目标路由名 |
+| `namesWithAliases()` | `array<string, int>` | 名称 + 别名 → ID 映射，供编译与 URL 生成 |
 | `merge(self $other, string $prefix = '', array $middleware = [])` | `self` | 合并另一个集合 |
-| `fingerprint()` | `string` | sha256 指纹，内容相同则指纹相同 |
+| `fingerprint()` | `string` | sha256 指纹，内容相同则指纹相同（已纳入别名） |
 | `compile()` | `CompiledRoutes` | 编译，结果内部缓存 |
 | `clear()` | `self` | 清空 |
 | `count()` | `int` | 路由数量 |
@@ -161,10 +165,12 @@ $router->group('api', function ($group, Router $r) {
 | 方法 | 返回 | 说明 |
 |------|------|------|
 | `name(string $name)` | `self` | 设置名称 |
+| `alias(string ...$names)` | `self` | 设置路由级别名（多个），空串 / 重复会被忽略 |
 | `prefix(string $prefix)` | `self` | 追加前缀 |
 | `middleware(mixed ...$middleware)` | `self` | 追加中间件 |
 | `where(string\|array $name, ?string $pattern = null)` | `self` | 参数正则约束 |
 | `defaults(array $defaults)` | `self` | 参数默认值 |
+| `getAliases()` | `array<string>` | 读取路由级别名 |
 | `getName()` / `getPath()` / `getMethods()` / `getHandler()` | — | 读取定义 |
 | `getCallback()` | `mixed` | `getHandler()` 的别名（1.x 兼容） |
 | `getMiddlewares()` / `getWheres()` / `getDefaults()` | `array` | 读取配置 |
@@ -202,7 +208,7 @@ $router->get('/posts/{slug}/{page}', $handler, 'post.page')
 | `getRoutes()` | `array<int, Route>` | 含子组的全部路由 |
 | `getOwnRoutes()` | `array<int, Route>` | 仅本组路由 |
 | `getGroups()` | `array<string, RouteGroup>` | 子组 |
-| `flatten(string $parentPrefix = '', array $parentMiddleware = [])` | `array<int, Route>` | 展开为扁平路由列表 |
+| `flatten(string $parentPrefix = '', array $parentMiddleware = [], string $parentName = '')` | `array<int, Route>` | 展开为扁平路由列表，逐层拼接前缀、继承中间件，并套上层级组名（`父.子`） |
 | `count()` | `int` | 路由数量（含子组） |
 
 ---
@@ -261,7 +267,8 @@ public function __construct(
 | 方法 | 返回 | 说明 |
 |------|------|------|
 | `match(string $method, string $path)` | `MatchResult` | **推荐入口**，只匹配不执行 |
-| `handle(string $method, string $path, mixed ...$extra)` | `mixed` | 匹配并执行，未命中抛异常 |
+| `run(string $method, string $path, array $args = [], mixed ...$extra)` | `mixed` | 匹配 + 中间件洋葱 + 处理器，未命中抛异常 |
+| `handle(string $method, string $path, mixed ...$extra)` | `mixed` | 匹配并执行（**不**执行中间件，1.x 兼容），未命中抛异常 |
 | `execute(string $method, string $path)` | `mixed` | `handle()` 的别名（1.x 兼容） |
 | `dispatch(string $method, string $path)` | `array` | FastRoute 原始三元组（1.x 兼容） |
 | `url(string $name, array $params = [], array $query = [])` | `string` | 生成 URL |
@@ -598,6 +605,7 @@ public function __construct(
 | `MiddlewareBridge::isAvailable()` | `bool` | `kode/middleware` 是否可用 |
 | `MiddlewareBridge::toRouteResult(MatchResult $result)` | `object` | 转换为 kode/middleware 的路由结果对象 |
 | `MiddlewareBridge::matcher(Dispatcher $dispatcher)` | `\Closure` | 生成可直接挂到管道上的匹配器 |
+| `MiddlewareBridge::controller(Dispatcher $dispatcher)` | `\Closure` | 把 Dispatcher 包成 PSR-7 请求 → 响应的控制器闭包 |
 
 不可用时 `isAvailable()` 返回 `false`，其余方法抛 `RouterException`，不会产生致命错误。
 
@@ -643,6 +651,29 @@ public function __construct($content = null, int $statusCode = 200, array $heade
 | `Response::html(string $html, int $statusCode = 200)` | HTML 响应 |
 | `Response::text(string $text, int $statusCode = 200)` | 纯文本响应 |
 | `Response::redirect(string $url, int $statusCode = 302)` | 重定向 |
+
+## 中间件管道 `Middleware\`
+
+把"路由组中间件 + 路由中间件"按洋葱模型包裹处理器，与 `kode/middleware` 共享同一份管道契约 `callable(array $args, callable $next): mixed`。
+
+### MiddlewareResolver
+
+把各种写法统一解析成管道契约闭包，解析无副作用、可缓存复用。
+
+| 方法 | 返回 | 说明 |
+|------|------|------|
+| `resolve(mixed $middleware)` | `callable` | 解析为闭包；无法解析抛 `InvalidArgumentException` |
+
+支持：`MiddlewareInterface` 实例、`MiddlewareInterface` 类名字符串、任意 callable、可调用对象（`__invoke`）。
+
+### Pipeline
+
+| 方法 | 返回 | 说明 |
+|------|------|------|
+| `Pipeline::run(array $args, callable $core, MiddlewareInterface\|callable ...$middlewares)` | `mixed` | 从外到内包裹 `$core` 并执行；短路时跳过内核与后续内层，已调用 `next` 的外层 `after` 仍会执行 |
+| `Pipeline::through(array $args, MiddlewareInterface\|callable ...$middlewares)` | `array` | 透传核心（以 `$args` 进出），便于纯加工场景 |
+
+管道无状态、只读，可在多进程 worker、多线程与 Fiber 协程间安全共享。
 
 ### MiddlewareInterface
 

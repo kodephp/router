@@ -20,6 +20,7 @@ use Kode\Router\Dispatcher;
 use Kode\Router\Distributed\RouteManifest;
 use Kode\Router\Distributed\TraceContext;
 use Kode\Router\MatchResult;
+use Kode\Router\RouteGroup;
 use Kode\Router\Router;
 
 function section(string $title): void
@@ -191,7 +192,7 @@ printf("子 span    : %s\n", $child->toTraceparent());
 section('10. 分布式：路由表一致性校验');
 // ============================================================
 
-$manifest = RouteManifest::fromCompiled($compiled, '2.0.0');
+$manifest = RouteManifest::fromCompiled($compiled, '2.1.0');
 
 printf("节点       : %s\n", $manifest->getNode());
 printf("路由数     : %d\n", $manifest->getRouteCount());
@@ -209,8 +210,50 @@ printf("与本地一致 : %s\n", $upstream?->matchesCompiled($compiled) === true
 // 模拟一个路由表变更的节点
 $staleRouter = clone $router;
 $staleRouter->get('/extra', 'Kode\Router\Example\Handlers::home', 'extra');
-$staleManifest = RouteManifest::fromCompiled($staleRouter->compile(), '2.0.0');
+$staleManifest = RouteManifest::fromCompiled($staleRouter->compile(), '2.1.0');
 printf("与旧节点一致: %s\n", $staleManifest->matchesCompiled($compiled) ? '是' : '否（需重载）');
+
+// ============================================================
+section('11. 嵌套分组、别名与中间件执行');
+// ============================================================
+
+$nested = new Router();
+
+// 嵌套分组：子组自动套上层级组名（api.v1），前缀与中间件逐层继承
+$nested->group('api', static function (RouteGroup $g): void {
+    $g->prefix('/api');
+    $g->middleware('Kode\Router\Example\TagMiddleware');          // 组级中间件（字符串类，可缓存）
+    $g->route(['GET'], '/ping', 'Kode\Router\Example\Handlers::home', 'api.ping');
+
+    $g->group('v1', static function (RouteGroup $sub): void {
+        $sub->prefix('/v1');
+        // 中间件改写参数：run() 会生效、handle() 不会 —— 直观证明洋葱模型执行了
+        $sub->middleware(static function (array $args, callable $next): mixed {
+            $args['id'] = 999;
+
+            return $next($args);
+        });
+        $sub->route(['GET'], '/me/{id:\d+}', static function ($id): string {
+            return "user {$id}";   // 路径参数是字符串，此处不强制 int 以贴合真实场景
+        }, 'api.v1.me');
+    });
+});
+
+// 别名：一个路由多个名字，URL 生成与命名解析共享同一段路由
+$nested->alias('account', 'api.v1.me');
+
+$nestedCompiled = $nested->compile();
+$nd = new Dispatcher($nestedCompiled);
+
+printf("层级组名    : %s\n", implode(', ', array_keys($nestedCompiled->getNamed())));
+printf("别名 URL    : %s\n", $nd->url('account', ['id' => 7]));
+printf("原名 URL    : %s\n", $nd->url('api.v1.me', ['id' => 7]));
+
+// run()：匹配 + 中间件洋葱 + 处理器，中间件改写的 id 会生效
+printf("run()      : %s（中间件把 id 改成了 999）\n", $nd->run('GET', '/api/v1/me/7'));
+
+// handle() 不执行中间件，便于回退到 1.x 行为
+printf("handle()   : %s（不走中间件）\n", $nd->handle('GET', '/api/v1/me/7'));
 
 $cache->clear();
 echo PHP_EOL, '完成。', PHP_EOL;

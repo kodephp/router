@@ -15,7 +15,7 @@ final class Response
     private int $statusCode = 200;
 
     /**
-     * @var array HTTP 响应头
+     * @var array<string, string> HTTP 响应头
      */
     private array $headers = [];
 
@@ -27,9 +27,9 @@ final class Response
     /**
      * 构造函数
      *
-     * @param mixed  $content  响应内容
-     * @param int    $statusCode HTTP 状态码
-     * @param array  $headers  响应头
+     * @param mixed               $content    响应内容
+     * @param int                 $statusCode HTTP 状态码
+     * @param array<string, string> $headers  响应头
      */
     public function __construct($content = null, int $statusCode = 200, array $headers = [])
     {

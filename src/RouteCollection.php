@@ -26,8 +26,8 @@ final class RouteCollection implements \IteratorAggregate, \Countable
     /** @var array<int, Route> 路由表：自增 ID => Route */
     private array $routes = [];
 
-    /** @var array<string, int> 命名路由表：名称 => 路由 ID */
-    private array $named = [];
+    /** @var array<string, string> 别名表：别名 => 目标路由名称 */
+    private array $aliases = [];
 
     /** @var int 下一个路由 ID */
     private int $nextId = 0;
@@ -45,20 +45,14 @@ final class RouteCollection implements \IteratorAggregate, \Countable
      */
     public function add(Route $route): Route
     {
-        $name = $route->getName();
-
-        if ($name !== null && isset($this->named[$name])) {
-            throw new InvalidRouteException("路由名称重复: {$name}");
-        }
-
         $id = $this->nextId++;
         $this->routes[$id] = $route;
-
-        if ($name !== null) {
-            $this->named[$name] = $id;
-        }
-
         $this->compiled = null;
+
+        // 路由可能在 add() 之后才通过 ->name() 设置名称，因此名称解析必须
+        // 惰性、从路由当前状态推导，而不能依赖注册时的快照。
+        // 这里顺便做一次重复名校验，让重复名尽早暴露。
+        $this->resolveNamed();
 
         return $route;
     }
@@ -108,7 +102,7 @@ final class RouteCollection implements \IteratorAggregate, \Countable
      */
     public function getByName(string $name): ?Route
     {
-        $id = $this->named[$name] ?? null;
+        $id = $this->resolveNamed()[$name] ?? null;
 
         return $id === null ? null : ($this->routes[$id] ?? null);
     }
@@ -121,7 +115,44 @@ final class RouteCollection implements \IteratorAggregate, \Countable
      */
     public function hasName(string $name): bool
     {
-        return isset($this->named[$name]);
+        return isset($this->resolveNamed()[$name]);
+    }
+
+    /**
+     * 注册别名
+     *
+     * 把另一个名字指向已存在的命名路由。别名可用于 URL 生成与命名解析，
+     * 与原名共享同一段路由。别名不能与已有路由名或其它别名冲突。
+     *
+     * @param string $alias 别名
+     * @param string $targetName 目标路由名称
+     *
+     * @throws InvalidRouteException 目标路由不存在、或别名已被占用时抛出
+     */
+    public function addAlias(string $alias, string $targetName): void
+    {
+        $named = $this->resolveNamed();
+
+        if (!isset($named[$targetName])) {
+            throw new InvalidRouteException("别名指向的目标路由不存在: {$targetName}");
+        }
+
+        if (isset($named[$alias]) || isset($this->aliases[$alias])) {
+            throw new InvalidRouteException("路由名称或别名已被占用: {$alias}");
+        }
+
+        $this->aliases[$alias] = $targetName;
+        $this->compiled = null;
+    }
+
+    /**
+     * 获取别名表
+     *
+     * @return array<string, string> 别名 => 目标路由名称
+     */
+    public function getAliases(): array
+    {
+        return $this->aliases;
     }
 
     /**
@@ -131,7 +162,68 @@ final class RouteCollection implements \IteratorAggregate, \Countable
      */
     public function names(): array
     {
-        return $this->named;
+        return $this->resolveNamed();
+    }
+
+    /**
+     * 获取"名称 + 别名"映射
+     *
+     * 在 {@see self::names()} 的基础上，把路由自身声明的别名与集合级别名
+     * 一并并入，统一解析为 名称/别名 => 路由 ID。供编译产物与 URL 生成使用。
+     *
+     * @return array<string, int> 名称或别名 => 路由 ID
+     */
+    public function namesWithAliases(): array
+    {
+        $named = $this->resolveNamed();
+
+        foreach ($this->routes as $id => $route) {
+            foreach ($route->getAliases() as $alias) {
+                if (!isset($named[$alias])) {
+                    $named[$alias] = $id;
+                }
+            }
+        }
+
+        foreach ($this->aliases as $alias => $target) {
+            $id = $named[$target] ?? null;
+
+            if ($id !== null && !isset($named[$alias])) {
+                $named[$alias] = $id;
+            }
+        }
+
+        return $named;
+    }
+
+    /**
+     * 惰性推导"名称 => 路由 ID"映射
+     *
+     * 路由名称可能在注册（add）之后才通过 {@see Route::name()} 设置，
+     * 因此不能依赖注册时的快照。每次都从当前路由集合实时推导，
+     * 名称重复时抛出 {@see InvalidRouteException}。
+     *
+     * @return array<string, int> 名称 => 路由 ID
+     *
+     * @throws InvalidRouteException 存在重复路由名称时抛出
+     */
+    private function resolveNamed(): array
+    {
+        $named = [];
+
+        foreach ($this->routes as $id => $route) {
+            $name = $route->getName();
+
+            if ($name !== null) {
+                if (isset($named[$name])) {
+                    throw new InvalidRouteException("路由名称重复: {$name}");
+                }
+
+                $named[$name] = $id;
+            }
+        }
+
+        return $named;
     }
 
     /**
@@ -189,6 +281,25 @@ final class RouteCollection implements \IteratorAggregate, \Countable
             ]);
         }
 
+        // 别名会改变"可生成的 URL 集合"，分布式部署时必须纳入一致性校验
+        $aliasNames = [];
+
+        foreach ($this->routes as $route) {
+            foreach ($route->getAliases() as $alias) {
+                $aliasNames[] = $alias;
+            }
+        }
+
+        foreach (array_keys($this->aliases) as $alias) {
+            $aliasNames[] = $alias;
+        }
+
+        sort($aliasNames);
+
+        if ($aliasNames !== []) {
+            $parts[] = 'aliases:' . implode(',', $aliasNames);
+        }
+
         return hash('sha256', implode("\n", $parts));
     }
 
@@ -212,7 +323,6 @@ final class RouteCollection implements \IteratorAggregate, \Countable
     public function clear(): self
     {
         $this->routes = [];
-        $this->named = [];
         $this->nextId = 0;
         $this->compiled = null;
 

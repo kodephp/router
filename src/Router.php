@@ -8,6 +8,7 @@ use FastRoute\DataGenerator\GroupCountBased as DataGenerator;
 use FastRoute\RouteCollector;
 use FastRoute\RouteParser\Std as StdRouteParser;
 use Kode\Router\Exception\InvalidRouteException;
+use Kode\Router\Middleware\MiddlewareResolver;
 
 /**
  * 路由器
@@ -337,7 +338,9 @@ class Router
      */
     public function resolveRoute(string $name): ?string
     {
-        return $this->collection->getByName($name)?->getPath();
+        $id = $this->collection->namesWithAliases()[$name] ?? null;
+
+        return $id === null ? null : $this->collection->get($id)?->getPath();
     }
 
     /**
@@ -349,7 +352,7 @@ class Router
     {
         $result = [];
 
-        foreach ($this->collection->names() as $name => $id) {
+        foreach ($this->collection->namesWithAliases() as $name => $id) {
             $route = $this->collection->get($id);
 
             if ($route !== null) {
@@ -358,6 +361,26 @@ class Router
         }
 
         return $result;
+    }
+
+    /**
+     * 注册路由别名
+     *
+     * 把一个名字指向已存在的命名路由，别名与原名共享同一段路由，
+     * 可用于 URL 生成与命名解析。例如兼容旧链接、语义化多入口。
+     *
+     * @param string $alias 别名
+     * @param string $targetName 目标路由名称
+     * @return self 当前实例，支持链式调用
+     *
+     * @throws InvalidRouteException 目标路由不存在或别名冲突时抛出
+     */
+    public function alias(string $alias, string $targetName): self
+    {
+        $this->collection->addAlias($alias, $targetName);
+        $this->invalidate();
+
+        return $this;
     }
 
     /**
@@ -378,7 +401,7 @@ class Router
      */
     public function createDispatcher(?HandlerResolver $resolver = null): Dispatcher
     {
-        return new Dispatcher($this->compile(), [], $resolver);
+        return new Dispatcher($this->compile(), [], $resolver, '', new MiddlewareResolver());
     }
 
     /**

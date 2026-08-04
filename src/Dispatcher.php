@@ -9,6 +9,8 @@ use FastRoute\Dispatcher\GroupCountBased;
 use FastRoute\RouteCollector;
 use Kode\Router\Exception\MethodNotAllowedException;
 use Kode\Router\Exception\RouteNotFoundException;
+use Kode\Router\Middleware\MiddlewareResolver;
+use Kode\Router\Middleware\Pipeline;
 
 /**
  * 路由分发器
@@ -40,6 +42,9 @@ class Dispatcher
     /** @var HandlerResolver 处理器解析器 */
     private HandlerResolver $resolver;
 
+    /** @var MiddlewareResolver 中间件解析器 */
+    private MiddlewareResolver $middlewareResolver;
+
     /** @var UrlGenerator URL 生成器 */
     private UrlGenerator $urlGenerator;
 
@@ -48,14 +53,17 @@ class Dispatcher
      * @param array<string, string> $namedRoutes 命名路由表（仅 1.x 兼容模式需要）
      * @param HandlerResolver|null $resolver 处理器解析器（可选）
      * @param string $basePath URL 生成时的统一前缀
+     * @param MiddlewareResolver|null $middlewareResolver 中间件解析器（可选）
      */
     public function __construct(
         CompiledRoutes|RouteCollector $source,
         array $namedRoutes = [],
         ?HandlerResolver $resolver = null,
-        string $basePath = ''
+        string $basePath = '',
+        ?MiddlewareResolver $middlewareResolver = null
     ) {
         $this->resolver = $resolver ?? new HandlerResolver();
+        $this->middlewareResolver = $middlewareResolver ?? new MiddlewareResolver();
 
         if ($source instanceof CompiledRoutes) {
             $this->compiled = $source;
@@ -137,6 +145,54 @@ class Dispatcher
         }
 
         return $this->resolver->call($result->getHandler(), $result->getParams(), array_values($extra));
+    }
+
+    /**
+     * 匹配并通过中间件管道执行路由
+     *
+     * 与 {@see self::handle()} 的区别：本方法会按"路由组中间件 + 路由中间件"
+     * 的顺序，把处理器包裹进中间件洋葱模型再执行。这正是结合 kode/middleware
+     * 的关键入口——路由上声明的中间件会在此被逐个调用。
+     *
+     * 管道无状态、只读，可在多进程 worker、多线程与 Fiber 协程间安全共享。
+     *
+     * @param string $method HTTP 方法
+     * @param string $path 请求路径
+     * @param array<string, mixed> $args 追加/覆盖给处理器的参数（合并在路径参数之后）
+     * @param mixed ...$extra 追加到处理器末尾的额外参数
+     * @return mixed 处理器返回值（经中间件链后）
+     *
+     * @throws RouteNotFoundException 未匹配到路由时抛出
+     * @throws MethodNotAllowedException HTTP 方法不被允许时抛出
+     */
+    public function run(string $method, string $path, array $args = [], mixed ...$extra): mixed
+    {
+        $result = $this->match($method, $path);
+
+        if ($result->isNotFound()) {
+            throw new RouteNotFoundException($method, $path);
+        }
+
+        if ($result->isMethodNotAllowed()) {
+            throw new MethodNotAllowedException($method, $result->getAllowedMethods(), $path);
+        }
+
+        $handler = $result->getHandler();
+        $middlewares = $result->getMiddleware();
+
+        /** @var array<int, callable> $resolved */
+        $resolved = array_map(
+            fn (mixed $middleware): callable => $this->middlewareResolver->resolve($middleware),
+            $middlewares
+        );
+
+        $core = function (array $finalArgs) use ($handler, $extra): mixed {
+            return $this->resolver->call($handler, $finalArgs, $extra);
+        };
+
+        $initialArgs = array_merge($result->getParams(), $args);
+
+        return Pipeline::run($initialArgs, $core, ...$resolved);
     }
 
     /**

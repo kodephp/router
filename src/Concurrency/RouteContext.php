@@ -49,6 +49,7 @@ final class RouteContext
     public static function set(MatchResult $result): void
     {
         if (self::useContext()) {
+            /** @phpstan-ignore-next-line Kode\Context\Context 为可选软依赖，仅在安装 kode/context 时存在 */
             \Kode\Context\Context::set(self::KEY, $result);
 
             return;
@@ -68,6 +69,7 @@ final class RouteContext
     public static function current(): ?MatchResult
     {
         if (self::useContext()) {
+            /** @phpstan-ignore-next-line Kode\Context\Context 为可选软依赖，仅在安装 kode/context 时存在 */
             $value = \Kode\Context\Context::get(self::KEY);
 
             return $value instanceof MatchResult ? $value : null;
@@ -128,6 +130,7 @@ final class RouteContext
     public static function clear(): void
     {
         if (self::useContext()) {
+            /** @phpstan-ignore-next-line Kode\Context\Context 为可选软依赖，仅在安装 kode/context 时存在 */
             \Kode\Context\Context::delete(self::KEY);
 
             return;
@@ -174,6 +177,7 @@ final class RouteContext
         self::$store = [];
 
         if (self::useContext()) {
+            /** @phpstan-ignore-next-line Kode\Context\Context 为可选软依赖，仅在安装 kode/context 时存在 */
             \Kode\Context\Context::delete(self::KEY);
         }
     }

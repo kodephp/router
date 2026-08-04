@@ -294,7 +294,7 @@ $trace->publish();
 ```php
 use Kode\Router\Distributed\RouteManifest;
 
-$manifest = RouteManifest::fromCompiled($compiled, version: '2.0.0');
+$manifest = RouteManifest::fromCompiled($compiled, version: '2.1.0');
 
 $response = $response
     ->withHeader('X-Kode-Route-Fingerprint', $manifest->getFingerprint())

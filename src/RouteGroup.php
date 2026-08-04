@@ -211,17 +211,20 @@ class RouteGroup
     /**
      * 展开为最终要注册的路由克隆体
      *
-     * 逐层拼接前缀、逐层继承中间件。返回的是克隆对象，
+     * 逐层拼接前缀、逐层继承中间件，并生成层级化的组名
+     * （父组.子组，例如 `api.v1`）。返回的是克隆对象，
      * 因此不会污染组内原始定义。
      *
      * @param string $parentPrefix 父级累积前缀
      * @param array<int, mixed> $parentMiddleware 父级累积中间件
+     * @param string $parentName 父级累积组名（用于生成层级名）
      * @return list<Route> 展开后的路由列表
      */
-    public function flatten(string $parentPrefix = '', array $parentMiddleware = []): array
+    public function flatten(string $parentPrefix = '', array $parentMiddleware = [], string $parentName = ''): array
     {
         $prefix = self::joinPrefix($parentPrefix, $this->prefix);
         $middleware = array_merge($parentMiddleware, $this->middlewares);
+        $name = $parentName === '' ? $this->name : $parentName . '.' . $this->name;
 
         $result = [];
 
@@ -236,12 +239,12 @@ class RouteGroup
                 $clone->middleware(...$middleware);
             }
 
-            $clone->setGroupName($this->name);
+            $clone->setGroupName($name);
             $result[] = $clone;
         }
 
         foreach ($this->groups as $group) {
-            foreach ($group->flatten($prefix, $middleware) as $route) {
+            foreach ($group->flatten($prefix, $middleware, $name) as $route) {
                 $result[] = $route;
             }
         }

@@ -88,7 +88,7 @@ final class HandlerResolver
      *
      * @param mixed $handler 处理器声明
      * @param array<string, mixed> $params 路径参数
-     * @param array<int, mixed> $extra 追加到末尾的额外参数
+     * @param array<int|string, mixed> $extra 追加到末尾的额外参数
      * @return mixed 处理器返回值
      *
      * @throws InvalidRouteException 无法解析时抛出

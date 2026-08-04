@@ -3,7 +3,7 @@
 [![PHP Version](https://img.shields.io/packagist/php-v/kode/router.svg?style=flat-square)](https://packagist.org/packages/kode/router)
 [![Latest Version](https://img.shields.io/packagist/v/kode/router.svg?style=flat-square)](https://packagist.org/packages/kode/router)
 [![License](https://img.shields.io/packagist/l/kode/router.svg?style=flat-square)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-158%20passed-brightgreen.svg?style=flat-square)](tests/)
+[![Tests](https://img.shields.io/badge/tests-182%20passed-brightgreen.svg?style=flat-square)](tests/)
 
 高性能路由组件：**编译期与运行期彻底分离**，路由表一次编译、多进程共享，原生适配 Fiber 协程 / 多线程 / 多进程与分布式链路透传。
 
@@ -45,7 +45,9 @@ RouteCollection   （不可变 / 可序列化）       （只读复用 / 无状�
 | 📁 **路由组** | 前缀、中间件、无限嵌套、跨 Router 挂载 |
 | 🔌 **PSR-15** | 提供 `RoutingMiddleware`，可直接插入任意 PSR-15 管道 |
 | 🧩 **零硬依赖** | 生态集成全部软探测，缺包自动降级，不装也能跑 |
-| 🐘 **现代 PHP** | PHP 8.3+，PHPStan level 8 全绿，158 个单元测试 |
+| 🏷️ **别名指向** | 一个路由多个名字，URL 生成与命名解析共享同一段路由 |
+| 🧅 **中间件执行** | 内置洋葱模型管道，原生对接 `kode/middleware` |
+| 🐘 **现代 PHP** | PHP 8.3+，PHPStan level 8 全绿，182 个单元测试 |
 
 ---
 
@@ -149,6 +151,10 @@ $router->group('api', function ($group) {
 $router->mount($moduleRouter, '/module', [ModuleMiddleware::class]);
 ```
 
+嵌套分组会自动套上一层**层级化组名**（父组.子组，例如 `api.admin`），
+组内每条路由都会被打上这个组名标签，方便按模块批量检索、组织与排查；
+路由自身的唯一名仍由你显式 `->name()` 指定。层数不限，前缀与中间件逐层继承。
+
 ---
 
 ## 编译期与运行期
@@ -196,6 +202,57 @@ $result->isMethodNotAllowed();  // 405，getAllowedMethods() 拿到允许的方�
 ```php
 $body = $dispatcher->handle('GET', '/users/42');   // 未命中抛 RouteNotFoundException
 ```
+
+`handle()` 只做匹配并执行处理器，**不会**执行路由上声明的中间件（保持 1.x 兼容）。
+要连中间件一起跑，用 `run()`：
+
+### 中间件执行（结合 kode/middleware）
+
+`Dispatcher::run()` 把"路由组中间件 + 路由中间件"按洋葱模型包裹处理器后再执行，
+这正是结合 `kode/middleware` 的关键入口。
+
+```php
+use Kode\Router\Middleware\Pipeline;
+use Kode\Router\Middleware\MiddlewareResolver;
+
+// 路由上声明的中间件，运行期会被自动解析并执行
+$router->get('/users/{id}', 'App\Controller\UserController@show', 'user.show')
+    ->middleware(AuthMiddleware::class, LogMiddleware::class);
+
+$dispatcher = new Dispatcher($router->compile());
+
+// run() = match + 中间件洋葱 + 处理器，未命中抛 RouteNotFoundException
+$body = $dispatcher->run('GET', '/users/42');
+```
+
+管道契约与 `kode/middleware` **完全一致**：
+
+```php
+// 任意中间件只要满足 callable(array $args, callable $next): mixed 即可
+final class AuthMiddleware implements Kode\Router\MiddlewareInterface
+{
+    public function handle(array $args, callable $next): mixed
+    {
+        // 在 $args 上加工（鉴权、注入上下文……）
+        return $next($args);
+    }
+}
+```
+
+`MiddlewareResolver` 会把以下写法统一解析成同一份管道契约闭包：
+
+| 写法 | 示例 |
+|------|------|
+| `MiddlewareInterface` 实例 | `new AuthMiddleware()` |
+| 实现接口的类名字符串 | `'App\Middleware\AuthMiddleware'` |
+| 任意 callable | `fn (array $a, callable $n) => $n($a)`、`[AuthMiddleware::class, 'handle']`（静态）、`[$instance, 'handle']` |
+| 可调用对象 | `__invoke(array $args, callable $next)` |
+
+管道本身是无状态、只读的，可在多进程 worker、多线程与 Fiber 协程之间安全共享：
+`Pipeline::run($args, $core, ...$middlewares)` 从外到内包裹，短路时只跳过内核与后续内层，已调用 `next` 的外层 `after` 仍会执行。
+
+> 如果你用的是 PSR-15 生态，`Integration\MiddlewareBridge` 已提供 `controller()` /
+> `matcher()` 软桥接，可与 `kode/middleware` 的管道无缝对接（详见下方「对接 kode/middleware」）。
 
 ---
 
@@ -379,7 +436,7 @@ $trace->publish();
 ```php
 use Kode\Router\Distributed\RouteManifest;
 
-$manifest = RouteManifest::fromCompiled($compiled, version: '2.0.0');
+$manifest = RouteManifest::fromCompiled($compiled, version: '2.1.0');
 
 $manifest->getFingerprint();        // 完整 sha256
 $manifest->getShortFingerprint();   // 前 16 位，日志友好
@@ -478,6 +535,30 @@ $generator->generate('user.show', ['id' => 42]);   // /app/users/42
 
 参数不满足 `where()` 约束、缺少必填参数、路由名不存在时，均抛出 `UrlGenerationException`。
 
+### 别名指向
+
+一个路由可以有多个名字，原名与别名共享同一段路由、生成同一份 URL。
+别名常用于"旧名兼容"或"语义化入口"，且会被纳入路由表指纹的分布式一致性校验。
+
+```php
+// 路由级别名
+$router->get('/users/{id}', 'App\Controller\UserController@show', 'user.show')
+    ->alias('profile', 'member');
+
+// 集合/路由器级别名（指向已存在的命名路由）
+$router->alias('account', 'user.show');
+
+// 原名、别名都能生成 URL，结果完全一致
+$router->url('user.show', ['id' => 42]);   // /users/42
+$router->url('profile',   ['id' => 42]);   // /users/42
+$router->url('account',   ['id' => 42]);   // /users/42
+
+// 编译产物里 named 已含别名，运行期无需再查集合
+$compiled->getNamed()['profile'];          // 路由 ID
+```
+
+规则：别名不能与已有路由名或其它别名冲突；指向的目标必须已存在，否则抛 `InvalidRouteException`。
+
 ---
 
 ## 异常
@@ -564,7 +645,7 @@ composer install
 composer test           # 运行测试
 ```
 
-当前质量基线：**158 个测试全部通过**。
+当前质量基线：**182 个测试全部通过**。
 
 ---
 
