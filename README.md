@@ -3,14 +3,11 @@
 [![PHP Version](https://img.shields.io/packagist/php-v/kode/router.svg?style=flat-square)](https://packagist.org/packages/kode/router)
 [![Latest Version](https://img.shields.io/packagist/v/kode/router.svg?style=flat-square)](https://packagist.org/packages/kode/router)
 [![License](https://img.shields.io/packagist/l/kode/router.svg?style=flat-square)](LICENSE)
-[![PHPStan Level](https://img.shields.io/badge/phpstan-level%208-brightgreen.svg?style=flat-square)](phpstan.neon)
 [![Tests](https://img.shields.io/badge/tests-158%20passed-brightgreen.svg?style=flat-square)](tests/)
 
 高性能路由组件：**编译期与运行期彻底分离**，路由表一次编译、多进程共享，原生适配 Fiber 协程 / 多线程 / 多进程与分布式链路透传。
 
 底层基于 [FastRoute](https://github.com/nikic/FastRoute)，上层补齐了常驻内存时代真正需要的东西：不可变匹配结果、可序列化的编译产物、协程安全的上下文隔离、跨节点路由一致性校验。
-
-> 名称 `kode` 简洁好记，不与 PHP 关键字冲突，发音类似 "code"。
 
 ---
 
@@ -564,18 +561,10 @@ $app->boot();
 
 ```bash
 composer install
-
 composer test           # 运行测试
-composer test-coverage  # 覆盖率报告
-composer phpstan        # 静态分析（level 8）
-composer cs-fix         # 修复代码风格
-composer cs-check       # 检查代码风格
-composer ci             # 完整 CI 流程
 ```
 
-当前质量基线：**158 个测试全部通过，PHPStan level 8 零错误**。
-
-代码规范：PSR-12、PHP 8.3+ 特性、完整中文注释、严格类型声明。详见 [CODE_STYLE.md](CODE_STYLE.md)。
+当前质量基线：**158 个测试全部通过**。
 
 ---
 
@@ -597,4 +586,4 @@ MIT License，详见 [LICENSE](LICENSE)。
 
 ## 贡献
 
-欢迎贡献，请先阅读 [CONTRIBUTING.md](CONTRIBUTING.md)。安全问题请按 [SECURITY.md](SECURITY.md) 的流程私下反馈。
+欢迎通过 Issue 与 Pull Request 贡献代码；如发现安全漏洞，请不要在公开 Issue 中报告，请通过邮箱私下反馈。

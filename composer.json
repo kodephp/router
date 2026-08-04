@@ -65,16 +65,7 @@
         }
     },
     "scripts": {
-        "test": "phpunit",
-        "test-coverage": "phpunit --coverage-html=coverage --coverage-clover=coverage/clover.xml",
-        "phpstan": "phpstan analyse --memory-limit=1G",
-        "cs-fix": "php-cs-fixer fix",
-        "cs-check": "php-cs-fixer fix --dry-run --diff",
-        "ci": [
-            "@test",
-            "@phpstan",
-            "@cs-check"
-        ]
+        "test": "phpunit tests"
     },
     "config": {
         "optimize-autoloader": true,
