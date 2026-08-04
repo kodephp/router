@@ -1,0 +1,18 @@
+# 发布时从 composer 分发包中剔除的文件（仅影响 dist 归档，不影响 git 仓库）
+# Export-ignore: keep these in the repo, but exclude from the installed package.
+
+tests/                                    export-ignore
+example/                                  export-ignore
+docs/                                     export-ignore
+.phpunit.cache/                           export-ignore
+.php-cs-fixer.cache                       export-ignore
+.github/                                  export-ignore
+.editorconfig                             export-ignore
+.markdown-link-check.json                 export-ignore
+.php-cs-fixer.dist.php                     export-ignore
+phpstan.neon                              export-ignore
+phpunit.xml                               export-ignore
+CHANGELOG.md                              export-ignore
+CODE_STYLE.md                             export-ignore
+CONTRIBUTING.md                           export-ignore
+SECURITY.md                               export-ignore

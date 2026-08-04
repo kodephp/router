@@ -1,0 +1,93 @@
+{
+    "name": "kode/router",
+    "type": "library",
+    "description": "高性能路由组件：编译期与运行期彻底分离，路由表一次编译、多进程共享，原生适配 Fiber 协程 / 多线程 / 多进程与分布式链路透传",
+    "keywords": [
+        "router",
+        "routing",
+        "fast-route",
+        "dispatcher",
+        "fiber",
+        "coroutine",
+        "swoole",
+        "parallel",
+        "process",
+        "distributed",
+        "psr-15",
+        "kodephp"
+    ],
+    "homepage": "https://github.com/kodephp/router",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Kode Team",
+            "email": "382601296@qq.com"
+        }
+    ],
+    "support": {
+        "issues": "https://github.com/kodephp/router/issues",
+        "source": "https://github.com/kodephp/router",
+        "docs": "https://github.com/kodephp/router#readme"
+    },
+    "require": {
+        "php": "^8.3",
+        "nikic/fast-route": "^1.3"
+    },
+    "require-dev": {
+        "friendsofphp/php-cs-fixer": "^3.0",
+        "nyholm/psr7": "^1.8",
+        "phpstan/phpstan": "^1.10",
+        "phpunit/phpunit": "^11.0 || ^12.0",
+        "psr/http-message": "^1.1 || ^2.0",
+        "psr/http-server-handler": "^1.0",
+        "psr/http-server-middleware": "^1.0"
+    },
+    "suggest": {
+        "kode/context": "协程 / 线程 / 进程环境下的路由上下文隔离与分布式链路透传",
+        "kode/middleware": "PSR-15 中间件管道，可用 MiddlewareBridge 直接对接",
+        "kode/di": "路由处理器的容器解析与构造函数自动装配",
+        "kode/fibers": "Fiber 协程运行器，用于批量并发执行路由",
+        "kode/parallel": "多线程运行器，需要 ext-parallel",
+        "kode/process": "多进程运行器与 worker 管理",
+        "kode/http": "PSR-7 消息实现与 HTTP 服务端集成",
+        "psr/http-server-middleware": "使用 Integration\\RoutingMiddleware 时需要",
+        "ext-apcu": "使用 ApcuRouteCache 在 PHP-FPM 多进程间共享路由表",
+        "ext-opcache": "配合 FileRouteCache，让路由缓存文件常驻共享内存"
+    },
+    "autoload": {
+        "psr-4": {
+            "Kode\\Router\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Kode\\Router\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "phpunit",
+        "test-coverage": "phpunit --coverage-html=coverage --coverage-clover=coverage/clover.xml",
+        "phpstan": "phpstan analyse --memory-limit=1G",
+        "cs-fix": "php-cs-fixer fix",
+        "cs-check": "php-cs-fixer fix --dry-run --diff",
+        "ci": [
+            "@test",
+            "@phpstan",
+            "@cs-check"
+        ]
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "sort-packages": true,
+        "allow-plugins": {
+            "phpstan/extension-installer": true
+        }
+    },
+    "extra": {
+        "branch-alias": {
+            "dev-main": "2.x-dev"
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

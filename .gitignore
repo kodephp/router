@@ -1,0 +1,65 @@
+# 依赖
+/vendor/
+/composer.phar
+composer.lock
+
+# 测试与静态分析产物
+/.phpunit.cache/
+/.phpunit.result.cache
+/phpunit-*.xml
+/coverage/
+/clover.xml
+/coverage.xml
+/.php-cs-fixer.cache
+/phpstan.neon.tmp
+
+# 开发规则与技能（仅本地使用，不随包分发、不上传仓库）
+/.workbuddy/
+/.trae/
+/.cursor/
+/.claude/
+/.agnes/
+/.codebuddy/
+/.github-copilot/
+CLAUDE.md
+AGENTS.md
+GEMINI.md
+.windsurfrules
+.cursorrules
+
+# 路由缓存产物
+/runtime/
+/storage/
+/cache/
+*.route-cache.php
+
+# IDE
+/.idea/
+/.vscode/
+/.fleet/
+*.swp
+*.swo
+*~
+
+# 操作系统
+.DS_Store
+Thumbs.db
+
+# 环境变量
+.env
+.env.local
+.env.*.local
+
+# 构建产物
+/build/
+/dist/
+/outputs/
+
+# 日志与临时文件
+/logs/
+/tmp/
+/temp/
+*.log
+*.tmp
+*.temp
+*.bak
