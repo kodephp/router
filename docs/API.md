@@ -191,6 +191,8 @@ $router->get('/posts/{slug}/{page}', $handler, 'post.page')
 ```
 
 约束会被编译进路径：`/posts/{slug:[a-z0-9\-]+}/{page:\d+}`。
+`where()` 在两种情况下抛 `InvalidRouteException`：正则缺失（`null`）或为空串
+（会编译出非法的 `{name:}` 占位符）、参数名不在路径中。
 
 ---
 
@@ -280,6 +282,13 @@ public function __construct(
 | `getDispatcher()` | `FastRoute\Dispatcher` | 底层 FastRoute 分发器 |
 
 `match()` 会自动大写 HTTP 方法、剥离查询字符串、规范化路径。
+
+**路径编码口径**：规范化只剥离查询串、补前导 `/`、去掉末尾 `/`（根路径除外），
+**不对路径做 urldecode**——匹配恒在 URL 编码态进行，命中后再对路径参数逐个
+`rawurldecode`（`match()` 的 `MatchResult`、`handle()`/`run()` 注入的实参、
+`dispatch()` 三元组的第三项都已解码）。因此 `/a/b%2Fc` 只配得上单段通配，
+不会因 `%2F` 先还原成 `/` 而误配 `/a/b/c`；含非 ASCII 的**字面量**路由段配不上
+编码态请求，字面量请用 ASCII，可变部分交给参数。
 
 `handle()` 的异常：未命中抛 `RouteNotFoundException`，方法不允许抛 `MethodNotAllowedException`（可 `getAllowedMethods()`）。
 
@@ -380,7 +389,10 @@ public function __construct(?object $container = null)
 | `call(mixed $handler, array $params = [], array $extra = [])` | `mixed` | 解析并立即调用 |
 | `HandlerResolver::isStatic(mixed $handler)` | `bool` | 静态：判断是否为可缓存形式 |
 
-参数绑定规则：**名称优先、位置兜底**。处理器形参名与路径参数同名时按名传入，否则按顺序传入；都不满足时用默认值。
+参数绑定规则：**名称优先、位置兜底**。处理器形参名与路径参数同名时按名传入，否则按
+**尚未被按名绑定的剩余参数**（保持原顺序）依次兜底；都不满足时用默认值。
+兜底不会重复消费已按名注入的值：`['id' => 7, 'name' => 'bob']` 配 `function ($id, $title)`
+得到 `7|bob`，而不是 `7|7`。
 
 ```php
 $router->get('/posts/{slug}/{page}', function (int $page, string $slug) { ... });

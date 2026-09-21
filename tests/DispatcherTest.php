@@ -31,6 +31,26 @@ class DispatcherTest extends TestCase
         $this->assertSame('user.show', $result->getName());
     }
 
+    public function testEncodedSlashStaysInOneSegmentAndParamDecodes(): void
+    {
+        $dispatcher = $this->compiledDispatcher();
+        // a%2Fb 在编码态是单段，命中 {id} 后再解码还原为 "a/b"；
+        // 旧实现先整体解码，会把 /users/a%2Fb 误配成两段路由
+        $result = $dispatcher->match('GET', '/users/a%2Fb');
+
+        $this->assertTrue($result->isFound());
+        $this->assertSame('a/b', $result->getParam('id'));
+    }
+
+    public function testPercentEncodedParamDecodedOnHandle(): void
+    {
+        $router = new Router();
+        $router->get('/tags/{name}', fn (string $name) => "tag:{$name}", 'tag.show');
+        $dispatcher = $router->createDispatcher();
+
+        $this->assertSame('tag:你好', $dispatcher->handle('GET', '/tags/%E4%BD%A0%E5%A5%BD'));
+    }
+
     public function testMatchNotFound(): void
     {
         $dispatcher = $this->compiledDispatcher();

@@ -112,7 +112,7 @@ class Dispatcher
 
             case FastRouteDispatcher::FOUND:
                 /** @var array<string, mixed> $params */
-                $params = $result[2] ?? [];
+                $params = self::decodeParams($result[2] ?? []);
 
                 return $this->buildFoundResult($result[1], $params);
 
@@ -219,7 +219,13 @@ class Dispatcher
      */
     public function dispatch(string $method, string $path): array
     {
-        return $this->dispatcher->dispatch(strtoupper($method), self::normalizeRequestPath($path));
+        $result = $this->dispatcher->dispatch(strtoupper($method), self::normalizeRequestPath($path));
+
+        if (($result[0] ?? null) === FastRouteDispatcher::FOUND && isset($result[2]) && is_array($result[2])) {
+            $result[2] = self::decodeParams($result[2]);
+        }
+
+        return $result;
     }
 
     /**
@@ -332,10 +338,14 @@ class Dispatcher
     }
 
     /**
-     * 规范化请求路径：剥离查询字符串、补全前导斜杠
+     * 规范化请求路径：剥离查询字符串、补全前导斜杠、归一末尾斜杠
+     *
+     * 注意：不做 urldecode——匹配必须发生在编码态路径上，
+     * 否则 %2F 会被还原成 / 而凭空多出一个段，导致 /a/b%2Fc 误配 /a/b/c。
+     * 路径参数在命中后由 {@see self::decodeParams()} 统一解码。
      *
      * @param string $path 原始请求路径
-     * @return string 规范化后的路径
+     * @return string 规范化后的路径（仍为 URL 编码态）
      */
     private static function normalizeRequestPath(string $path): string
     {
@@ -359,6 +369,23 @@ class Dispatcher
             $path = $path === '' ? '/' : $path;
         }
 
-        return rawurldecode($path);
+        return $path;
+    }
+
+    /**
+     * 对命中的路径参数逐个 rawurldecode（与匹配前不解码的口径配对）。
+     *
+     * @param array<string, mixed> $params
+     * @return array<string, mixed>
+     */
+    private static function decodeParams(array $params): array
+    {
+        foreach ($params as $name => $value) {
+            if (is_string($value)) {
+                $params[$name] = rawurldecode($value);
+            }
+        }
+
+        return $params;
     }
 }

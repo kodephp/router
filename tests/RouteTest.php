@@ -130,4 +130,20 @@ class RouteTest extends TestCase
         $route = new Route(['GET'], '/x', 'X@handle');
         $this->assertSame('X@handle', $route->getCallback());
     }
+
+    public function testWhereRejectsNullPattern(): void
+    {
+        $route = new Route(['GET'], '/users/{id}', fn () => null);
+
+        $this->expectException(\Kode\Router\Exception\InvalidRouteException::class);
+        $route->where('id', null);
+    }
+
+    public function testWhereRejectsEmptyRegexInArrayForm(): void
+    {
+        $route = new Route(['GET'], '/users/{id}', fn () => null);
+
+        $this->expectException(\Kode\Router\Exception\InvalidRouteException::class);
+        $route->where(['id' => '']);
+    }
 }

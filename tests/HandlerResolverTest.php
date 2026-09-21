@@ -44,6 +44,17 @@ class HandlerResolverTest extends TestCase
         $this->assertSame('a#2', $resolver->call([UserController::class, 'reversed'], ['slug' => 'a', 'page' => '2']));
     }
 
+    public function testPositionalFallbackSkipsNameBoundValues(): void
+    {
+        $resolver = new HandlerResolver();
+        $handler = function ($id, $title) {
+            return "{$id}|{$title}";
+        };
+
+        // id 按名绑定后，未命中的 title 应取剩余参数 name 的值，而非重复注入 id
+        $this->assertSame('7|bob', $resolver->call($handler, ['id' => '7', 'name' => 'bob']));
+    }
+
     public function testResolveInvokableClass(): void
     {
         $resolver = new HandlerResolver();

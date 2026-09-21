@@ -132,6 +132,29 @@ $router->get('/posts/{slug}/{page}', $handler, 'post.page')
 $router->get('/archive[/{year:\d{4}}]', $handler, 'archive');
 ```
 
+约束会被编译进路径：`/posts/{slug:[a-z0-9\-]+}/{page:\d+}`。
+`where()` 的正则不能为空串或 `null`（会编译出非法的 `{name:}` 占位符），
+参数名不在路径里同样抛 `InvalidRouteException`。
+
+### 路径编码与参数解码
+
+匹配发生在 **URL 编码态**的路径上，命中后才对参数逐个 `rawurldecode`：
+
+```php
+$router->get('/users/{id}', $handler);
+
+(new Dispatcher($router->compile()))->match('GET', '/users/a%2Fb')
+    ->getParam('id');   // 'a/b' —— 编码态仍是单个段，不会误配成两段路由
+```
+
+请求路径的规范化只做三件事：剥离查询串、补前导 `/`、去掉末尾 `/`（根路径除外），
+**不做整体 urldecode**。原因是 `%2F` 一旦在匹配前被还原成 `/`，就凭空多出一个段，
+`/a/b%2Fc` 会去匹配 `/a/b/c`——路径参数的边界由此被客户端左右。
+
+由此有两条约定：路由字面量请用 ASCII 书写（含中文的字面量段永远配不上，
+因为浏览器发出的请求恒为编码态）；参数值请通过 `UrlGenerator` 生成，它会对
+参数做 `rawurlencode`，与匹配侧的解码口径成对。
+
 ### 路由组与挂载
 
 ```php

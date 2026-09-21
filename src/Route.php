@@ -298,10 +298,15 @@ REGEX;
      */
     public function where(string|array $name, ?string $pattern = null): self
     {
-        $constraints = is_array($name) ? $name : [$name => (string) $pattern];
+        $constraints = is_array($name) ? $name : [$name => $pattern];
         $available = $this->getParameterNames();
 
         foreach ($constraints as $param => $regex) {
+            if ($regex === null || $regex === '') {
+                throw new InvalidRouteException(
+                    "参数 {$param} 的约束正则不能为空（空串会编译出非法的 {name:} 占位符）"
+                );
+            }
             if (!in_array($param, $available, true)) {
                 throw new InvalidRouteException(
                     "路由 {$this->path} 中不存在参数 {{$param}}，无法为其设置约束"

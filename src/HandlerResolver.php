@@ -260,21 +260,23 @@ final class HandlerResolver
             return [];
         }
 
-        $positional = array_values($params);
         $args = [];
-        $cursor = 0;
+        // 位置回退只能消费“尚未按名绑定”的参数，否则同名值会被重复注入
+        $remaining = $params;
 
         foreach ($parameters as $parameter) {
             $name = $parameter->getName();
 
             if (array_key_exists($name, $params)) {
                 $args[] = $params[$name];
+                unset($remaining[$name]);
                 continue;
             }
 
-            if (array_key_exists($cursor, $positional)) {
-                $args[] = $positional[$cursor];
-                $cursor++;
+            $nextKey = array_key_first($remaining);
+            if ($nextKey !== null) {
+                $args[] = $remaining[$nextKey];
+                unset($remaining[$nextKey]);
                 continue;
             }
 
