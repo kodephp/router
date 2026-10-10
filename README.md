@@ -47,7 +47,7 @@ RouteCollection   （不可变 / 可序列化）       （只读复用 / 无状�
 | 🧩 **零硬依赖** | 生态集成全部软探测，缺包自动降级，不装也能跑 |
 | 🏷️ **别名指向** | 一个路由多个名字，URL 生成与命名解析共享同一段路由 |
 | 🧅 **中间件执行** | 内置洋葱模型管道，原生对接 `kode/middleware` |
-| 🐘 **现代 PHP** | PHP 8.3+，PHPStan level 8 全绿，182 个单元测试 |
+| 🐘 **现代 PHP** | PHP 8.4+，PHPStan level 8 全绿，182 个单元测试 |
 
 ---
 
@@ -57,7 +57,7 @@ RouteCollection   （不可变 / 可序列化）       （只读复用 / 无状�
 composer require kode/router
 ```
 
-要求 PHP 8.3+ 与 Composer 2.0+。唯一硬依赖是 `nikic/fast-route`。
+要求 PHP 8.4+ 与 Composer 2.0+。唯一硬依赖是 `nikic/fast-route`。
 
 可选扩展与配套包（装了就自动启用，不装静默降级）：
 
