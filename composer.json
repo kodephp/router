@@ -1,6 +1,6 @@
 {
     "name": "kode/router",
-    "version": "3.0.3",
+    "version": "3.0.4",
     "type": "library",
     "description": "高性能路由组件：编译期与运行期彻底分离，路由表一次编译、多进程共享，原生适配 Fiber 协程 / 多线程 / 多进程与分布式链路透传",
     "keywords": [
@@ -44,6 +44,7 @@
         "psr/http-server-middleware": "^1.0"
     },
     "suggest": {
+        "ext-pcntl": "PCNTL 扩展 - 用于进程信号优雅退出/并发",
         "kode/context": "协程 / 线程 / 进程环境下的路由上下文隔离与分布式链路透传",
         "kode/middleware": "PSR-15 中间件管道，可用 MiddlewareBridge 直接对接",
         "kode/di": "路由处理器的容器解析与构造函数自动装配",
