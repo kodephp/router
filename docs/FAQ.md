@@ -134,7 +134,7 @@ RouteContext::run($result, fn () => $controller->handle());
 
 ### Q: 没有 Swoole，Fiber 能用吗
 
-能。Fiber 是 PHP 8.1+ 的语言特性，不需要任何扩展。`Runtime::supportsFibers()` 在 8.3 上恒为 `true`。
+能。Fiber 是 PHP 8.1+ 的语言特性，不需要任何扩展。`Runtime::supportsFibers()` 在 8.4 上恒为 `true`。
 
 ### Q: 常驻进程内存持续上涨
 
