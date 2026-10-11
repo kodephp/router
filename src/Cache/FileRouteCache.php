@@ -43,6 +43,7 @@ final class FileRouteCache implements RouteCacheInterface
      * @param string $key 缓存键
      * @return CompiledRoutes|null 编译产物，未命中或文件损坏返回 null
      */
+    #[\Override]
     public function get(string $key): ?CompiledRoutes
     {
         if (isset($this->memo[$key])) {
@@ -80,6 +81,7 @@ final class FileRouteCache implements RouteCacheInterface
      *
      * @throws RouteCacheException 缓存目录无法创建或不可写时抛出
      */
+    #[\Override]
     public function set(string $key, CompiledRoutes $routes): bool
     {
         if (!$routes->isCacheable()) {
@@ -128,6 +130,7 @@ final class FileRouteCache implements RouteCacheInterface
      * @param callable(): CompiledRoutes $compiler 编译回调
      * @return CompiledRoutes 编译产物
      */
+    #[\Override]
     public function remember(string $key, callable $compiler): CompiledRoutes
     {
         $cached = $this->get($key);
@@ -154,6 +157,7 @@ final class FileRouteCache implements RouteCacheInterface
      * @param string $key 缓存键
      * @return bool 存在返回 true
      */
+    #[\Override]
     public function has(string $key): bool
     {
         return isset($this->memo[$key]) || is_file($this->path($key));
@@ -165,6 +169,7 @@ final class FileRouteCache implements RouteCacheInterface
      * @param string $key 缓存键
      * @return bool 删除成功返回 true
      */
+    #[\Override]
     public function forget(string $key): bool
     {
         unset($this->memo[$key]);
@@ -187,6 +192,7 @@ final class FileRouteCache implements RouteCacheInterface
      *
      * @return bool 清空成功返回 true
      */
+    #[\Override]
     public function clear(): bool
     {
         $this->memo = [];

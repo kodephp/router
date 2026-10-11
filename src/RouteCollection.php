@@ -334,6 +334,7 @@ final class RouteCollection implements \IteratorAggregate, \Countable
      *
      * @return int 已注册的路由条数
      */
+    #[\Override]
     public function count(): int
     {
         return count($this->routes);
@@ -344,6 +345,7 @@ final class RouteCollection implements \IteratorAggregate, \Countable
      *
      * @return \Traversable<int, Route> 迭代器
      */
+    #[\Override]
     public function getIterator(): \Traversable
     {
         return new \ArrayIterator($this->routes);

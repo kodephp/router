@@ -27,6 +27,7 @@ final class NullRouteCache implements RouteCacheInterface
      * @param string $key 缓存键
      * @return CompiledRoutes|null 恒返回 null
      */
+    #[\Override]
     public function get(string $key): ?CompiledRoutes
     {
         return null;
@@ -39,6 +40,7 @@ final class NullRouteCache implements RouteCacheInterface
      * @param CompiledRoutes $routes 编译产物
      * @return bool 恒返回 false
      */
+    #[\Override]
     public function set(string $key, CompiledRoutes $routes): bool
     {
         return false;
@@ -51,6 +53,7 @@ final class NullRouteCache implements RouteCacheInterface
      * @param callable(): CompiledRoutes $compiler 编译回调
      * @return CompiledRoutes 编译产物
      */
+    #[\Override]
     public function remember(string $key, callable $compiler): CompiledRoutes
     {
         return $compiler();
@@ -62,6 +65,7 @@ final class NullRouteCache implements RouteCacheInterface
      * @param string $key 缓存键
      * @return bool 恒返回 false
      */
+    #[\Override]
     public function has(string $key): bool
     {
         return false;
@@ -73,6 +77,7 @@ final class NullRouteCache implements RouteCacheInterface
      * @param string $key 缓存键
      * @return bool 恒返回 true
      */
+    #[\Override]
     public function forget(string $key): bool
     {
         return true;
@@ -83,6 +88,7 @@ final class NullRouteCache implements RouteCacheInterface
      *
      * @return bool 恒返回 true
      */
+    #[\Override]
     public function clear(): bool
     {
         return true;

@@ -51,6 +51,7 @@ final class RoutingMiddleware implements PsrMiddlewareInterface
      * @param RequestHandlerInterface $handler 下一个处理器
      * @return ResponseInterface 响应
      */
+    #[\Override]
     public function process(
         ServerRequestInterface $request,
         RequestHandlerInterface $handler

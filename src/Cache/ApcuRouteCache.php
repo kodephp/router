@@ -54,6 +54,7 @@ final class ApcuRouteCache implements RouteCacheInterface
      * @param string $key 缓存键
      * @return CompiledRoutes|null 编译产物，未命中返回 null
      */
+    #[\Override]
     public function get(string $key): ?CompiledRoutes
     {
         if (isset($this->memo[$key])) {
@@ -87,6 +88,7 @@ final class ApcuRouteCache implements RouteCacheInterface
      * @param CompiledRoutes $routes 编译产物
      * @return bool 写入成功返回 true
      */
+    #[\Override]
     public function set(string $key, CompiledRoutes $routes): bool
     {
         if (!$routes->isCacheable() || !self::isSupported()) {
@@ -105,6 +107,7 @@ final class ApcuRouteCache implements RouteCacheInterface
      * @param callable(): CompiledRoutes $compiler 编译回调
      * @return CompiledRoutes 编译产物
      */
+    #[\Override]
     public function remember(string $key, callable $compiler): CompiledRoutes
     {
         $cached = $this->get($key);
@@ -130,6 +133,7 @@ final class ApcuRouteCache implements RouteCacheInterface
      * @param string $key 缓存键
      * @return bool 存在返回 true
      */
+    #[\Override]
     public function has(string $key): bool
     {
         if (isset($this->memo[$key])) {
@@ -145,6 +149,7 @@ final class ApcuRouteCache implements RouteCacheInterface
      * @param string $key 缓存键
      * @return bool 删除成功返回 true
      */
+    #[\Override]
     public function forget(string $key): bool
     {
         unset($this->memo[$key]);
@@ -163,6 +168,7 @@ final class ApcuRouteCache implements RouteCacheInterface
      *
      * @return bool 清空成功返回 true
      */
+    #[\Override]
     public function clear(): bool
     {
         $this->memo = [];
