@@ -454,13 +454,7 @@ REGEX;
             return false;
         }
 
-        foreach ($this->middlewares as $middleware) {
-            if ($middleware instanceof \Closure || is_object($middleware)) {
-                return false;
-            }
-        }
-
-        return true;
+        return array_all($this->middlewares, fn($middleware) => !($middleware instanceof \Closure || is_object($middleware)));
     }
 
     /**

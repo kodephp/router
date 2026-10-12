@@ -1,6 +1,6 @@
 {
     "name": "kode/router",
-    "version": "3.0.4",
+    "version": "3.0.5",
     "type": "library",
     "description": "高性能路由组件：编译期与运行期彻底分离，路由表一次编译、多进程共享，原生适配 Fiber 协程 / 多线程 / 多进程与分布式链路透传",
     "keywords": [
