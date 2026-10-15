@@ -55,8 +55,7 @@ final class HandlerResolver
         }
 
         if (is_array($handler) && count($handler) === 2) {
-            /** @var array{0: object|string, 1: string} $handler */
-            [$target, $method] = array_values($handler);
+            [$target, $method] = $handler;
 
             $instance = is_object($target) ? $target : $this->instantiate((string) $target);
 
@@ -160,7 +159,9 @@ final class HandlerResolver
             $reflection = new \ReflectionMethod($class, $method);
 
             if ($reflection->isStatic()) {
-                /** @var callable $staticCallable */
+                // class_exists+method_exists+isStatic 已运行期证明该串可调用，拼接形态静态不可证
+                /** @var callable-string $staticCallable */
+                // @phpstan-ignore varTag.nativeType (运行期已证明可调用，concat 形态静态不可证)
                 $staticCallable = $class . '::' . $method;
 
                 return $staticCallable;
@@ -302,7 +303,6 @@ final class HandlerResolver
     private static function reflect(callable $callable): \ReflectionFunctionAbstract
     {
         if (is_array($callable)) {
-            /** @var array{0: object|string, 1: string} $callable */
             return new \ReflectionMethod($callable[0], $callable[1]);
         }
 
@@ -314,7 +314,6 @@ final class HandlerResolver
             return new \ReflectionMethod($callable, '__invoke');
         }
 
-        /** @var \Closure|string $callable */
         return new \ReflectionFunction($callable);
     }
 }

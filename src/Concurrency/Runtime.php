@@ -114,7 +114,7 @@ final class Runtime
      */
     public static function supportsFibers(): bool
     {
-        return PHP_VERSION_ID >= 80100 && class_exists(\Fiber::class);
+        return class_exists(\Fiber::class);
     }
 
     /**

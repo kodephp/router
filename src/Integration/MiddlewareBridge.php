@@ -68,7 +68,6 @@ final class MiddlewareBridge
     {
         self::assertAvailable();
 
-        /** @var class-string $class */
         $class = self::ROUTE_RESULT;
 
         if ($result->isNotFound()) {
